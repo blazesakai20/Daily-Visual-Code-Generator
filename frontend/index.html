@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>InspireFrame - Daily Quote</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <a href="index.html" class="active">Home</a>
+    <a href="upload.html">Upload Quote</a>
+    <a href="login.html">Login</a>
+    <a href="register.html">Register</a>
+    <a href="profile.html">Profile</a>
+    <a href="../backend/admin_panel.php">Admin Panel</a>
+    <a href="../backend/logout.php">Logout</a>
+  </nav>
+
+  <div class="container">
+    <h1>Daily Visual Quote</h1>
+    <div id="quoteContainer">
+      <img id="quoteImage" src="" alt="Quote Image" class="image-preview"><br>
+      <blockquote id="quoteText">Loading quote...</blockquote>
+      <p id="quoteAuthor"></p>
+      <div style="margin-top: 20px;">
+        <button id="randomQuoteBtn" class="button">New Random Quote</button>
+      </div>
+    </div>
+    <p id="message" class="message"></p>
+  </div>
+
+  <script>
+    let currentQuoteId = null;
+    let currentUserId = null;
+
+    function showMessage(text, type = 'info') {
+      const messageElement = document.getElementById('message');
+      messageElement.textContent = text;
+      messageElement.className = 'message ' + type;
+      messageElement.style.display = 'block';
+      messageElement.style.opacity = '1';
+      setTimeout(() => {
+        messageElement.style.opacity = '0';
+      }, 5000);
+    }
+
+    function setActiveNav() {
+      const path = window.location.pathname.split('/').pop();
+      document.querySelectorAll('nav a').forEach(link => {
+        link.classList.remove('active');
+        if (link.getAttribute('href').includes(path)) {
+          link.classList.add('active');
+        }
+      });
+    }
+
+    function checkIfFavorite(userId, quoteId) {
+      const favoriteBtn = document.getElementById('favoriteBtn');
+      if (!userId || !quoteId) {
+        favoriteBtn.textContent = 'Add to Favorites';
+        return;
+      }
+      fetch(`../backend/check_favorite.php?user_id=${userId}&quote_id=${quoteId}`)
+        .then(res => res.json())
+        .then(data => {
+          favoriteBtn.textContent = data.is_favorite ? 'Remove from Favorites' : 'Add to Favorites';
+          favoriteBtn.onclick = () =>
+            data.is_favorite ? removeFavorite(userId, quoteId) : addFavorite(userId, quoteId);
+        });
+    }
+
+    function addFavorite(userId, quoteId) {
+      if (!userId || !quoteId) return showMessage('Login to add favorites.', 'error');
+      fetch('../backend/add_favorite.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `quote_id=${quoteId}`
+      }).then(res => res.text()).then(data => {
+        showMessage(data, data.includes('success') ? 'success' : 'error');
+        checkIfFavorite(userId, quoteId);
+      });
+    }
+
+    function removeFavorite(userId, quoteId) {
+      if (!userId || !quoteId) return showMessage('Login to remove favorites.', 'error');
+      fetch('../backend/remove_favorite.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `quote_id=${quoteId}`
+      }).then(res => res.text()).then(data => {
+        showMessage(data, data.includes('success') ? 'success' : 'error');
+        checkIfFavorite(userId, quoteId);
+      });
+    }
+
+    function loadNewQuote(isRandom = false) {
+      fetch(isRandom ? '../backend/get_random_quote.php' : '../backend/get_daily_quote.php')
+        .then(res => res.json())
+        .then(data => {
+          if (data && data.id) {
+            document.getElementById('quoteImage').src = data.image_path;
+            document.getElementById('quoteText').textContent = `"${data.quote_text}"`;
+            document.getElementById('quoteAuthor').textContent = `- ${data.author}`;
+            currentQuoteId = data.id;
+            checkIfFavorite(currentUserId, currentQuoteId);
+          } else {
+            showMessage('No quotes available.', 'info');
+          }
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setActiveNav();
+      fetch('../backend/check_login.php')
+        .then(res => res.json())
+        .then(data => {
+          if (data.logged_in) {
+            currentUserId = data.user_id;
+            showMessage(`Welcome, ${data.username}!`, 'success');
+          } else {
+            showMessage('You are not logged in.', 'info');
+          }
+          loadNewQuote();
+        });
+      document.getElementById('randomQuoteBtn').addEventListener('click', () => loadNewQuote(true));
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Upload Quote - InspireFrame</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="upload.html" class="active">Upload Quote</a>
+    <a href="login.html">Login</a>
+    <a href="register.html">Register</a>
+    <a href="profile.html">Profile</a>
+    <a href="../backend/admin_panel.php">Admin Panel</a>
+    <a href="../backend/logout.php">Logout</a>
+  </nav>
+
+  <div class="form-container">
+    <h1>Upload a New Quote</h1>
+    <form id="uploadForm" enctype="multipart/form-data">
+      <textarea name="quote_text" placeholder="Enter quote text" required></textarea>
+      <input type="text" name="author" placeholder="Author" required>
+      <label for="image">Upload Image:</label>
+      <input type="file" name="image" id="image" accept="image/*" required>
+      <button type="submit" class="button">Upload Quote</button>
+    </form>
+    <p id="message" class="message"></p>
+  </div>
+
+  <script>
+    const form = document.getElementById('uploadForm');
+    const message = document.getElementById('message');
+
+    function showMessage(text, type = 'info') {
+      message.textContent = text;
+      message.className = 'message ' + type;
+      message.style.display = 'block';
+      message.style.opacity = '1';
+      setTimeout(() => { message.style.opacity = '0'; }, 5000);
+    }
+
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      const formData = new FormData(form);
+      fetch('../backend/upload_quote.php', {
+        method: 'POST',
+        body: formData
+      })
+      .then(res => res.text())
+      .then(data => {
+        showMessage(data, data.includes('successfully') ? 'success' : 'error');
+        if (data.includes('successfully')) {
+          form.reset();
+        }
+      })
+      .catch(() => showMessage('An error occurred during upload.', 'error'));
+    });
+  </script>
+</body>
+</html>
